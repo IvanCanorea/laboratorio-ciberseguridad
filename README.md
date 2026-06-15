@@ -5,28 +5,27 @@ Laboratorio personal de seguridad ofensiva y defensiva montado sobre Proxmox con
 ## Arquitectura
 
 ```
-┌─────────────────────────────────────────────────┐
-│                  PROXMOX VE                      │
-│              (192.168.1.156)                     │
-│                                                  │
-│  ┌──────────────┐  ┌──────────────┐             │
-│  │   Suricata   │  │   Hermes     │             │
-│  │   IDS/IPS    │  │   Agente IA  │             │
-│  │   (IDS)      │  │   (OWL)      │             │
-│  └──────┬───────┘  └──────┬───────┘             │
-│         │                 │                      │
-│  ┌──────┴─────────────────┴──────┐              │
-│  │      Red Interna (VLAN)       │              │
-│  │      192.168.1.0/24           │              │
-│  └──────────────┬────────────────┘              │
-│                 │                                │
-└─────────────────┼────────────────────────────────┘
++-------------------------------------------------+
+|                  PROXMOX VE                      |
+|              (192.168.1.156)                     |
+|                                                  |
+|  +--------------+  +--------------+             |
+|  |   Suricata   │  │   Hermes     │             |
+|  |   IDS/IPS    │  │   Agente IA  │             |
+|  |   (IDS)      │  │   (OWL)      │             |
+|  +------+-------+  +------+-------+             |
+|         │                 │                      |
+|  +------+-----------------+------+              |
+|  │      Red Interna (VLAN)       │              |
+|  │      192.168.1.0/24           │              |
+|  +--------------+----------------+              |
++-------------------------------------------------+
                   │
-         ┌────────┴────────┐
+         +--------+--------+
          │   Kali Linux    │
          │   (Atacante)    │
          │   VMware/Local  │
-         └─────────────────┘
+         └────────────────-+
 ```
 
 ## Componentes
@@ -35,9 +34,24 @@ Laboratorio personal de seguridad ofensiva y defensiva montado sobre Proxmox con
 - **Version:** Suricata 7.0.3
 - **Modo:** IDS (deteccion)
 - **Interfaz:** eth0@if9 (192.168.1.0/24)
-- **Reglas:** Emerging Threats Open + reglas base del paquete
+- **Reglas:** 282 reglas base + 9 reglas personalizadas
 - **Logs:** `/var/log/suricata/eve.json`
-- **Alertas procesadas por:** Hermes (agente IA)
+
+### Reglas Personalizadas (SID 1000001-1000009)
+
+| SID | Descripcion |
+|-----|-------------|
+| 1000001 | Escaneo SYN (>50 SYN en 10s desde misma IP) |
+| 1000002 | NULL scan (puertos con flags vacias) |
+| 1000003 | XMAS scan (flags FPU) |
+| 1000004 | Fuerza bruta SSH (10 intentos en 60s) |
+| 1000005 | Volumen alto DNS (>100 consultas en 60s) |
+| 1000006 | Intento de acceso a /admin en HTTP |
+| 1000007 | Path traversal (../ en URLs) |
+| 1000008 | User-Agent Nmap detectado |
+| 1000009 | Escaneo UDP (>50 paquetes en 10s) |
+
+Ver archivo completo: `suricata/rules/local.rules`
 
 ### Hermes - Agente IA
 - **Framework:** Hermes Agent (Nous Research)
@@ -53,24 +67,24 @@ Laboratorio personal de seguridad ofensiva y defensiva montado sobre Proxmox con
 | n8n | 5678 | Workflows de automatizacion |
 | Web Luna | 3003 | Chat con modelo local (Ollama) |
 
-## Seguridad
+## Escenarios de Ataque
 
-Este laboratorio esta aislado en red interna (192.168.1.0/24). 
-El trafico de ataque se genera desde Kali Linux en VMware sobre la misma red local.
+Documentados en `kali/escenarios/`:
 
-**Reglas de uso:**
-- Solo para propositos educativos y de aprendizaje
-- Todo el trafice se genera en red interna aislada
-- No se expone ningun servicio a Internet sin proteccion
+1. **Escaneo de puertos con Nmap** (-sS, -sN, -sX)
+2. **Fuerza bruta SSH con Hydra**
+3. **Escaneo web con Nikto**
+4. **Inyeccion SQL con SQLMap**
+5. **Trafico DNS sospechoso**
 
 ## Roadmap
 
-- [x] Instalacion de Suricata IDS
-- [ ] Configuracion de reglas personalizadas
+- [x] Instalacion de Suricata IDS en Proxmox
+- [x] Configuracion de 9 reglas personalizadas
+- [ ] Prueba de escenarios de ataque desde Kali
 - [ ] Integracion Suricata + Hermes (alertas automaticas)
 - [ ] Dashboard de visualizacion de alertas
-- [ ] Escenarios de ataque controlados desde Kali
-- [ ] Documentacion de cada escenario
+- [ ] Bloqueo automatico de IPs maliciosas
 
 ## Sobre este proyecto
 
